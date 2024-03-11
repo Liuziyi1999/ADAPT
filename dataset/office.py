@@ -5,7 +5,7 @@ from dassl.utils import listdir_nohidden
 from dassl.data.datasets import DATASET_REGISTRY, Datum, DatasetBase
 
 
-@DATASET_REGISTRY.register() #这是一个装饰器，用于将 Office 类注册到 DATASET_REGISTRY 中，以便在数据集工厂中可以通过名称找到和创建该数据集。
+@DATASET_REGISTRY.register()
 class Office31(DatasetBase):
     dataset_dir = "office31"
     domains = ["amazon", "dslr", "webcam"]
