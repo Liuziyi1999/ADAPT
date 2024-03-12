@@ -3,8 +3,8 @@
 cd ..
 
 # custom config
-DATA=/home/zyliu/Code/DAPL/dataset # you may change your path to dataset here
-TRAINER=DAPL
+DATA=/Code/ADAPT/dataset # you may change your path to dataset here
+TRAINER=ADAPT
 
 DATASET=$1 # name of the dataset
 CFG=$2  # config file 配置文件名称
@@ -12,8 +12,6 @@ T=$3 # temperature
 TAU=$4 # pseudo label threshold
 U=$5 # coefficient for loss_u
 NAME=$6 # job name
-
-#export PYTHONPATH=/home/zyliu/Code/DAPL/Dassl.pytorch:$PYTHONPATH
 
 
 for SEED in 2
@@ -31,9 +29,9 @@ do
         --dataset-config-file configs/datasets/${DATASET}.yaml \
         --config-file configs/trainers/${TRAINER}/${CFG}.yaml \
         --output-dir ${DIR} \
-        TRAINER.DAPL.T ${T} \
-        TRAINER.DAPL.TAU ${TAU} \
-        TRAINER.DAPL.U ${U} &
+        TRAINER.ADAPT.T ${T} \
+        TRAINER.ADAPT.TAU ${TAU} \
+        TRAINER.ADAPT.U ${U} &
     fi
 done
 
