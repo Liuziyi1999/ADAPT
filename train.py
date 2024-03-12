@@ -13,16 +13,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 from dassl.data.datasets import VisDA17
 from dassl.data.datasets import OfficeHome
 
-import trainers.dapl
-import trainers.cocoop
-import  trainers.coop
-import trainers.independentVL
-import trainers.maple
-import trainers.vpt
-import trainers.zsclip
+import trainers.adapt
 
-
-#打印命令行参数和配置信息
 def print_args(args, cfg):
     print("***************")
     print("** Arguments **")
@@ -36,7 +28,7 @@ def print_args(args, cfg):
     print("************")
     print(cfg)
 
-#根据命令行参数的值，重置配置参数
+
 def reset_cfg(cfg, args):
     if args.root:
         cfg.DATASET.ROOT = args.root
@@ -69,7 +61,7 @@ def reset_cfg(cfg, args):
         cfg.MODEL.HEAD.NAME = args.head
 
 
-#用于扩展配置参数，添加新的配置项。这里示例了一些DAPL的配置项。
+
 def extend_cfg(cfg):
     """
     Add new config variables.
@@ -84,60 +76,21 @@ def extend_cfg(cfg):
     from yacs.config import CfgNode as CN
 
     cfg.MODEL.BACKBONE.PATH = "./assets"
-    cfg.TRAINER.DAPL = CN()
-    cfg.TRAINER.DAPL.N_DMX = 16  # number of DSC tokens
-    cfg.TRAINER.DAPL.N_CTX = 16  # number of context vectors
-    cfg.TRAINER.DAPL.CSC = False  # class-specific context
-    cfg.TRAINER.DAPL.PREC = "fp16"  # fp16, fp32, amp
-    cfg.TRAINER.DAPL.T = 1.0
-    cfg.TRAINER.DAPL.TAU = 0.5
-    cfg.TRAINER.DAPL.U = 1.0
-    cfg.TRAINER.DAPL.PROMPT_DEPTH_VISION = 9
-    cfg.TRAINER.DAPL.PROMPT_DEPTH_TEXT = 1
-    cfg.TRAINER.DAPL.N_CTX_VISION = 2
-    cfg.TRAINER.DAPL.N_CTX_TEXT = 32
+    cfg.TRAINER.ADAPT = CN()
+    cfg.TRAINER.ADAPT.N_DMX = 16  # number of DSC tokens
+    cfg.TRAINER.ADAPT.N_CTX = 16  # number of context vectors
+    cfg.TRAINER.ADAPT.CSC = False  # class-specific context
+    cfg.TRAINER.ADAPT.PREC = "fp16"  # fp16, fp32, amp
+    cfg.TRAINER.ADAPT.T = 1.0
+    cfg.TRAINER.ADAPT.TAU = 0.5
+    cfg.TRAINER.ADAPT.U = 1.0
+    cfg.TRAINER.ADAPT.PROMPT_DEPTH_VISION = 9
+    cfg.TRAINER.ADAPT.PROMPT_DEPTH_TEXT = 1
+    cfg.TRAINER.ADAPT.N_CTX_VISION = 2
+    cfg.TRAINER.ADAPT.N_CTX_TEXT = 32
 
     # cfg.DATALOADER.TRAIN_X.SAMPLER = "RandomSampler"
     # cfg.DATALOADER.TRAIN_U.SAMPLER = "RandomSampler"
-
-    cfg.TRAINER.COOP = CN()
-    cfg.TRAINER.COOP.N_CTX = 16  # number of context vectors
-    cfg.TRAINER.COOP.CSC = False  # class-specific context
-    cfg.TRAINER.COOP.CTX_INIT = ""  # initialization words
-    cfg.TRAINER.COOP.PREC = "fp16"  # fp16, fp32, amp
-    cfg.TRAINER.COOP.CLASS_TOKEN_POSITION = "end"  # 'middle' or 'end' or 'front'
-
-    cfg.TRAINER.COCOOP = CN()
-    cfg.TRAINER.COCOOP.N_CTX = 16  # number of context vectors
-    cfg.TRAINER.COCOOP.CTX_INIT = ""  # initialization words
-    cfg.TRAINER.COCOOP.PREC = "fp16"  # fp16, fp32, amp
-
-    # Config for MaPLe
-    cfg.TRAINER.MAPLE = CN()
-    cfg.TRAINER.MAPLE.N_CTX = 2  # number of context vectors
-    cfg.TRAINER.MAPLE.CTX_INIT = "a photo of a"  # initialization words
-    cfg.TRAINER.MAPLE.PREC = "fp16"  # fp16, fp32, amp
-    cfg.TRAINER.MAPLE.PROMPT_DEPTH = 9 # Max 12, minimum 0, for 1 it will act as shallow MaPLe (J=1)
-    cfg.DATASET.SUBSAMPLE_CLASSES = "all"  # all, base or new
-
-    # Config for independent Vision Language prompting (independent-vlp)
-    cfg.TRAINER.IVLP = CN()
-    cfg.TRAINER.IVLP.N_CTX_VISION = 2  # number of context vectors at the vision branch
-    cfg.TRAINER.IVLP.N_CTX_TEXT = 2  # number of context vectors at the language branch
-    cfg.TRAINER.IVLP.CTX_INIT = "a photo of a"  # initialization words (only for language prompts)
-    cfg.TRAINER.IVLP.PREC = "fp16"  # fp16, fp32, amp
-    # If both variables below are set to 0, 0, will the config will degenerate to COOP model
-    cfg.TRAINER.IVLP.PROMPT_DEPTH_VISION = 9 # Max 12, minimum 0, for 0 it will act as shallow MaPLe (J=1)
-    cfg.TRAINER.IVLP.PROMPT_DEPTH_TEXT = 9  # Max 12, minimum 0, for 0 it will act as shallow MaPLe (J=1)
-    cfg.DATASET.SUBSAMPLE_CLASSES = "all"  # all, base or new
-
-    # Config for only vision side prompting
-    cfg.TRAINER.VPT = CN()
-    cfg.TRAINER.VPT.N_CTX_VISION = 2  # number of context vectors at the vision branch
-    cfg.TRAINER.VPT.CTX_INIT = "a photo of a"  # initialization words
-    cfg.TRAINER.VPT.PREC = "fp16"  # fp16, fp32, amp
-    cfg.TRAINER.VPT.PROMPT_DEPTH_VISION = 1  # if set to 1, will represent shallow vision prompting only
-    cfg.DATASET.SUBSAMPLE_CLASSES = "all"  # all, base or new
 
 def setup_cfg(args):
     cfg = get_cfg_default()
