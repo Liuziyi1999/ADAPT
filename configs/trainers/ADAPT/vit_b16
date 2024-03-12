@@ -31,7 +31,7 @@ MODEL:
     NAME: "ViT-B/16"
 
 TRAINER:
-  DAPL:
+  ADAPT:
     PREC: "amp"
     N_DMX: 1
     N_CTX: 1
