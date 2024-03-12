@@ -3,8 +3,8 @@
 cd ..
 
 # custom config
-DATA=/home/zyliu/Code/DAPL/dataset
-TRAINER=DAPL
+DATA=/Code/ADAPT/dataset
+TRAINER=ADAPT
 
 DATASET=$1
 CFG=$2  # config file
@@ -13,7 +13,6 @@ TAU=$4 # pseudo label threshold
 U=$5 # coefficient for loss_u
 NAME=$6 # job name
 
-#export PYTHONPATH=/home/zyliu/Code/DAPL/Dassl.pytorch:$PYTHONPATH
 
 for SEED in 2
 do
