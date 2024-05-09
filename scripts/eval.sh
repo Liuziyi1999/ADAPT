@@ -27,5 +27,3 @@ do
     --output-dir ${DIR} \
     --eval-only
 done
-
-#sed -i 's/\r//' eval.sh
