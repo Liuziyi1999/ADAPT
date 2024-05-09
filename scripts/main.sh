@@ -7,7 +7,7 @@ DATA=/Code/ADAPT/dataset # you may change your path to dataset here
 TRAINER=ADAPT
 
 DATASET=$1 # name of the dataset
-CFG=$2  # config file 配置文件名称
+CFG=$2  # config file 
 T=$3 # temperature
 TAU=$4 # pseudo label threshold
 U=$5 # coefficient for loss_u
@@ -34,11 +34,3 @@ do
         TRAINER.ADAPT.U ${U} &
     fi
 done
-
-# Wait for all background jobs to complete
-wait
-
-#sed -i 's/\r//' main.sh
-#bash main.sh visda17 vit_b16 1.0 0.6 1.0 deep12
-#bash main.sh office_home vit_b16 1.0 0.8 1.0 t1_deep12
-#bash main.sh office vit_b16 1.0 0.8 1.0 t3
