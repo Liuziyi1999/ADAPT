@@ -28,6 +28,7 @@ You may follow the installation guide from [CLIP](https://github.com/KaiyangZhou
 ## Dataset
 - Manually download the datasets [Office](https://drive.google.com/file/d/0B4IapRTv9pJ1WGZVd1VDMmhwdlE/view), [Office-Home](https://drive.google.com/file/d/0B81rNlvomiwed0V1YUxQdC1uOTg/view), from the official websites.
 - [VisDA](https://ai.bu.edu/visda-2017/) is a dataset from VisDA 2017 challenge. It contains two domains, i.e., 152397 synthetic images and 55388 real images.
+- [Mini-DomainNet](https://github.com/KaiyangZhou/Dassl.pytorch/blob/master/DATASETS.md#miniDomainNet) is a subset of [DomainNet](http://ai.bu.edu/M3SDA/), which is known as the most challenging dataset for UDA.
 
 ## How to Run
 We provide the running scripts in ```scripts/```. Make sure you change the path in ```DATA``` and run the commands under ```ADAPT/scripts/```.
@@ -50,6 +51,9 @@ We have upload a pretrained weight. You can load it and evaluate in the target d
 bash eval.sh visda17 ep25-32-csc 1.0 0.5 1.0 t0
 ```
 
+### Other information
+Currently only the shallow version is available, the deep version will be updated after the paper is published.
+
 ### Acknowledgement
 Thanks for the following projects:
 - [CLIP](https://github.com/openai/CLIP)
@@ -57,4 +61,6 @@ Thanks for the following projects:
 - [CoOp](https://github.com/KaiyangZhou/CoOp)
 - [DAPL](https://github.com/LeapLabTHU/DAPrompt)
 - [Maple](https://github.com/muzairkhattak/multimodal-prompt-learning)
+
+
 
