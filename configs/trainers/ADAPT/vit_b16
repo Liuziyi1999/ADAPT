@@ -35,7 +35,7 @@ TRAINER:
     PREC: "amp"
     N_DMX: 1
     N_CTX: 1
-    CSC: True
+    CSC: False
     T: 1.0
     TAU: 0.8
     U: 1.0
