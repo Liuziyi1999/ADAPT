@@ -17,7 +17,7 @@ INPUT:
 OPTIM:
   NAME: "sgd"
   LR: 0.0025
-  MAX_EPOCH: 60
+  MAX_EPOCH: 40
   LR_SCHEDULER: "cosine"
   WARMUP_EPOCH: 1
   WARMUP_TYPE: "constant"
@@ -33,14 +33,14 @@ MODEL:
 TRAINER:
   ADAPT:
     PREC: "amp"
-    N_DMX: 1
-    N_CTX: 1
+    N_DMX: 2
+    N_CTX: 2
     CSC: False
     T: 1.0
     TAU: 0.8
     U: 1.0
 
-    PROMPT_DEPTH_VISION: 12
-    PROMPT_DEPTH_TEXT: 12
+    PROMPT_DEPTH_VISION: 1
+    PROMPT_DEPTH_TEXT: 1
     N_CTX_VISION: 2
-    N_CTX_TEXT: 2
+    N_CTX_TEXT: 4
