@@ -255,12 +255,6 @@ class DAPL(TrainerXU):
 
         if cfg.MODEL.INIT_WEIGHTS:
             load_pretrained_weights(self.model, cfg.MODEL.INIT_WEIGHTS)
-        # for name, param in self.model.named_parameters():
-        #     if "prompt_learner" not in name:
-        #         param.requires_grad_(False)
-
-        # if cfg.MODEL.INIT_WEIGHTS:
-        #     load_pretrained_weights(self.model.prompt_learner, cfg.MODEL.INIT_WEIGHTS)
 
         self.model.to(self.device)
 
@@ -276,7 +270,6 @@ class DAPL(TrainerXU):
             raise ValueError
 
         # NOTE: only give prompt_learner to the optimizer
-        # self.optim = build_optimizer(self.model.prompt_learner, cfg.OPTIM)
         self.optim = build_optimizer(self.model, cfg.OPTIM)  
         self.sched = build_lr_scheduler(self.optim, cfg.OPTIM)
         '''
@@ -284,8 +277,6 @@ class DAPL(TrainerXU):
         register the module before use
         '''
         self.register_model("prompt_learner", self.model, self.optim, self.sched) 
-        # self.register_model("prompt_learner", self.model.prompt_learner, self.optim, self.sched)
-
         self.scaler = GradScaler() if cfg.TRAINER.DAPL.PREC == "amp" else None
 
         # Note that multi-gpu training could be slow because CLIP's size is
@@ -392,7 +383,6 @@ class DAPL(TrainerXU):
             else:
                 loss_summary = self.forward_backward_prompt_learner(batch_x, batch_u)
 
-            # loss_summary = self.forward_backward_prompt_learner(batch_x, batch_u)
             batch_time.update(time.time() - end)
             losses.update(loss_summary)
 
@@ -522,14 +512,15 @@ class DAPL(TrainerXU):
         entropy = torch.sum(entropy, dim=1)
         return entropy
 
-    def forward_backward_VPT(self, batch_x, batch_u):
+     def forward_backward_VPT(self, batch_x, batch_u):
         image_x, label, image_u = self.parse_batch_train(batch_x, batch_u)
         prec = self.cfg.TRAINER.DAPL.PREC
 
         if prec == "amp":
             with autocast():
-                output_x, _ = self.model(image_x)
-                output_u, _ = self.model(image_u)
+                # train vision prompt
+                output_x = self.model(image_x)
+                output_u = self.model(image_u)
 
                 domain_x_label = torch.zeros(output_x.size(0), dtype=torch.long).to(torch.device("cuda"))
                 domain_u_label = torch.ones(output_x.size(0), dtype=torch.long).to(torch.device("cuda"))
@@ -545,6 +536,7 @@ class DAPL(TrainerXU):
                 domain_token_u = torch.stack((source_domain_token_u, target_domain_token_u), dim=1)
                 domain_u_soft = torch.softmax(domain_token_u, dim=1)
                 domain_loss_u = F.cross_entropy(domain_u_soft, domain_u_label)
+
 
                 #IM loss
                 softmax_out = nn.Softmax(dim=1)(output_u[:, self.n_cls:2 * self.n_cls])
@@ -565,7 +557,6 @@ class DAPL(TrainerXU):
                 soft_class_token = torch.softmax(class_token, dim=1)
                 class_loss_x_G = F.cross_entropy(soft_class_token, domain_x_label)
 
-
                 # only clip annotation
                 pseudo_label = torch.softmax(
                     output_u[:, -self.n_cls:].reshape(-1, self.n_cls) /
@@ -574,6 +565,9 @@ class DAPL(TrainerXU):
 
                 max_probs, label_p = torch.max(pseudo_label, dim=-1)
                 mask = max_probs.ge(self.cfg.TRAINER.DAPL.TAU).float()
+
+                output_u_soft = torch.softmax(output_u[:, self.n_cls:2 * self.n_cls], dim=1)
+                loss_u = (F.cross_entropy(output_u_soft, label_p, reduction="none") * mask).sum() / mask.sum()
 
                 source_class_u = torch.randn(32).to(torch.device("cuda"))
                 target_class_u = torch.randn(32).to(torch.device("cuda"))
@@ -589,10 +583,8 @@ class DAPL(TrainerXU):
 
 
                 lam = 2 / (1 + math.exp(-1 * 10 * self.epoch / self.max_epoch)) - 1
-                loss_G = im_loss - ((class_loss_x_G + class_loss_u_G * 0.1) - (domain_loss_x + domain_loss_u) * lam)*1
-                # loss_G = im_loss + (class_loss_x_G + class_loss_u_G) + (domain_loss_x + domain_loss_u)
-
-
+                loss_G = self.cfg.TRAINER.DAPL.U * loss_u + im_loss - (
+                            (class_loss_x_G + class_loss_u_G) - (domain_loss_x + domain_loss_u) * lam)
 
             self.optim.zero_grad()
             self.scaler.scale(loss_G).backward()
@@ -601,6 +593,7 @@ class DAPL(TrainerXU):
         loss_summary_G = {
             "loss_G": loss_G.item(),
             "im_loss": im_loss.item(),
+            "loss_u_G": loss_u.item(),
             "domain_loss_x_G": domain_loss_x.item(),
             "domain_loss_u_G": domain_loss_u.item(),
             "class_loss_x_G": class_loss_x_G.item(),
@@ -675,7 +668,7 @@ class DAPL(TrainerXU):
             # set strict=False
             self._models[name].load_state_dict(state_dict, strict=False)
 
-    @torch.no_grad()
+   @torch.no_grad()
     def test(self, split=None):
         """A generic testing pipeline."""
         self.set_model_mode("eval")
@@ -684,100 +677,16 @@ class DAPL(TrainerXU):
         if split is None:
             split = self.cfg.TEST.SPLIT
 
-        data_loader = self.train_loader_x
-        num_classes = 65
-        feature_num = np.zeros(num_classes)
-        feature_sum = np.zeros((num_classes, 512))
-        for batch_idx, batch in enumerate(data_loader):
-            input, label = self.parse_batch_test(batch)
-            output, image_features, text_features = self.model_inference(input)
-            output = output.reshape(-1, self.n_dm, self.n_cls)
-            # the last second slice is the logits for target domain
-            output = output[:, -2, :]
-            self.evaluator.process(output, label)
-
-            for class_label in range(65):
-                class_samples = image_features[label == class_label].cpu().numpy()
-                feature_num[class_label] += len(class_samples)
-                feature_sum[class_label] += np.sum(class_samples, axis=0)
-
-        average_feature_x = np.zeros((num_classes, 512))
-        for class_label in range(num_classes):
-            if feature_num[class_label] > 0:
-                average_feature_x[class_label] = feature_sum[class_label] / feature_num[class_label]
-
-        data_loader = self.test_loader
-        num_classes = 65
-        feature_num = np.zeros(num_classes)
-        feature_sum = np.zeros((num_classes, 512))
-        for batch_idx, batch in enumerate(data_loader):
-            input, label = self.parse_batch_test(batch)
-            output, image_features, text_features = self.model_inference(input)
-            output = output.reshape(-1, self.n_dm, self.n_cls)
-            # the last second slice is the logits for target domain
-            output = output[:, -2, :]
-            self.evaluator.process(output, label)
-
-            for class_label in range(65):
-                class_samples = image_features[label == class_label].cpu().numpy()
-                feature_num[class_label] += len(class_samples)
-                feature_sum[class_label] += np.sum(class_samples, axis=0)
-
-        average_feature = np.zeros((num_classes, 512))
-        for class_label in range(num_classes):
-            if feature_num[class_label] > 0:
-                average_feature[class_label] = feature_sum[class_label] / feature_num[class_label]
-
-        # 计算MMD距离
-        mmd_distance = self.compute_mmd(average_feature_x, average_feature, self.gaussian_kernel)
-        print("mmd")
-        print(mmd_distance)
-
-        inter_class_distance = 0
-        source_text_distance = 0
-        target_text_distance = 0
-        CLIP_text_distance = 0
-        k = 0
-        for i in range(65):
-            for j in range(i+1, 65):
-                # 计算类别中心之间的L2距离
-                inter_class_distance += np.linalg.norm(average_feature[i] - average_feature[j])
-                source_text_distance += np.linalg.norm(text_features[i].cpu().numpy() - text_features[j].cpu().numpy())
-                target_text_distance += np.linalg.norm(text_features[i+65].cpu().numpy() - text_features[j+65].cpu().numpy())
-                CLIP_text_distance += np.linalg.norm(
-                    text_features[i + 130].cpu().numpy() - text_features[j + 130].cpu().numpy())
-
-                k = k+1
-        print(inter_class_distance/k)
-        print(source_text_distance / k)
-        print(target_text_distance / k)
-        print("CLIP_text_distance")
-        print(CLIP_text_distance/k)
-
         data_loader = self.test_loader
         print("Do evaluation on test set")
-        l2_distinct = 0
-        squared_distance=0
+
         for batch_idx, batch in enumerate(data_loader):
             input, label = self.parse_batch_test(batch)
-            output, image_features, text_features = self.model_inference(input)
-
-            output = output.reshape(-1, self.n_dm, self.n_cls)
+            output = self.model_inference(input).reshape(
+                -1, self.n_dm, self.n_cls)
             # the last second slice is the logits for target domain
             output = output[:, -2, :]
             self.evaluator.process(output, label)
-
-            # class_distances = np.zeros(65)
-            # for class_label in range(65):
-            #     class_samples = image_features[label == class_label].cpu().numpy()
-            #     if len(class_samples) > 1:
-            #         class_distances[class_label] = np.mean(euclidean_distances(class_samples, class_samples))
-
-            for i in range(input.size(0)):
-                l2_distinct += np.linalg.norm(image_features[i].cpu().numpy() - average_feature[label[i]])
-                squared_distance += np.sum((image_features[i].cpu().numpy() - average_feature[label[i]]) ** 2)
-        print(l2_distinct/4365.0)
-        print(squared_distance/4365.0/65.0)
 
         results = self.evaluator.evaluate()
         for k, v in results.items():
