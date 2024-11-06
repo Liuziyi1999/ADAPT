@@ -39,7 +39,7 @@ The commond is in the file ADAPT/scripts/main.sh, which contains six input argum
 - ```DATASET``` takes as input a dataset name, like ```visda```、```Office``` or ```Office-Home```. The valid names are the files' names in ```ADAPT/configs/datasets/```. The names of dataset, source domain and target domain is defined in the file. The visual backbone is also defined in the yaml. file for the common visual backbone is related to dataset. You may follow these files to establish new datasets;
 - ```CFG``` means which config file to use, such as ```vit_b16``` (see ```ADAPT/configs/trainers/ADAPT/```). The implemntation details are included in this file. You may modify the hyper-parameters in the file;
 
-Below we provide examples on how to run DAPL on VisDA-2017. The file ```ADAPT/scripts/main.sh``` defines the path to dataset in the line 6. You may set it as the true path to your dataset. If you want to train DAPL on the VisDA-2017 dataset, you may run the below command in the path ```ADAPT/scripts```:
+Below we provide examples on how to run ADAPT on VisDA-2017. The file ```ADAPT/scripts/main.sh``` defines the path to dataset in the line 6. You may set it as the true path to your dataset. If you want to train ADAPT on the VisDA-2017 dataset, you may run the below command in the path ```ADAPT/scripts```:
 
 ``` 
 bash main.sh visda17 vit_b16 1.0 0.5 1.0 t0
